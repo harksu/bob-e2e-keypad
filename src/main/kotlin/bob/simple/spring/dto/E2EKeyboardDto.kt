@@ -6,15 +6,12 @@ data class E2EKeyboardMessageResponse(val message: String, val author: String,va
 
 data class E2EKeyboardResponse(
     val keyList: List<String?>,
-    val base64Image: String
+    val base64Image: String,
+    val id : String
 )
 
 data class EncryptedInputRequest(
-    val encryptedUserInput: String
+    val encryptedUserInput: String,
+    val receivedId:String
 )
 
-data class AuthRequestDto(
-    val userInput: String,
-    val keyHashMap: Map<String, String>,
-    val keyLength: Int
-)

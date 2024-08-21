@@ -33,7 +33,7 @@ class E2EKeyboardContoroller(val myService: E2EKeyboardService) {
 
     @PostMapping("/send-keypad-userInput")
     fun getUserKeypadInput(@RequestBody request: EncryptedInputRequest):ResponseEntity<String> {
-        myService.getUserKeypadInput(request.encryptedUserInput);
+        myService.getUserKeypadInput(request.encryptedUserInput, request.receivedId);
         return ResponseEntity.ok("Post Encrypted UserInput Success")
     }
 

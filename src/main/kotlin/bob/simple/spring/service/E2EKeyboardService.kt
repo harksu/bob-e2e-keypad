@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
 import bob.simple.spring.dto.E2EKeyboardResponse
-import bob.simple.spring.dto.AuthRequestDto
 import kotlin.random.Random
 import kotlin.collections.mapOf
 
@@ -25,6 +24,8 @@ import org.springframework.http.ResponseEntity
 class E2EKeyboardService (private val restTemplate:RestTemplate){
 
     private var savedHashMap: Map<String, String>? = null
+    private var savedId: String =  UUID.randomUUID().toString()
+    private var savedTimestamp: Long? = null
 
     fun generateBase64Image(keys: List<String>): String {
         return try {
@@ -85,6 +86,9 @@ class E2EKeyboardService (private val restTemplate:RestTemplate){
         }
         //println(hashMap)
         savedHashMap = hashMap.mapKeys { it.key.toString() }
+
+        savedTimestamp = System.currentTimeMillis()
+
         //println(savedHashMap)
 
         val keyList = mutableListOf<String?>()
@@ -97,18 +101,31 @@ class E2EKeyboardService (private val restTemplate:RestTemplate){
 
         return E2EKeyboardResponse(
             keyList = keyList,
-            base64Image = base64Image
+            base64Image = base64Image,
+            id = savedId
         )
     }
 
-    fun getUserKeypadInput(encryptedUserInput:String){
+    fun getUserKeypadInput(encryptedUserInput:String,receivedId:String){
         //여기서 이제 엔드포인트한테 요청을 보내야됨
 
         val url = "http://146.56.119.112:8081/auth"
 
         val keyHashMap = savedHashMap ?: throw IllegalStateException("HashMap not found")
+        val savedId = savedId ?: throw IllegalStateException("ID not found")
+        val savedTimestamp = savedTimestamp ?: throw IllegalStateException("Timestamp not found")
         //println(keyHashMap)
+        val currentTime = System.currentTimeMillis()
 
+        if (receivedId != savedId) {
+            println("Invalid ID")
+            throw IllegalStateException("Invalid ID")
+        }
+
+        if (currentTime - savedTimestamp > 60 * 1000) {
+            println("Request timed out")
+            throw IllegalStateException("Request timed out")
+        }
 
         val requestPayload = mapOf(
             "userInput" to encryptedUserInput,
