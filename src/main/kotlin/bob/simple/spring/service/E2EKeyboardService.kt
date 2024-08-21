@@ -24,7 +24,7 @@ import org.springframework.http.ResponseEntity
 class E2EKeyboardService (private val restTemplate:RestTemplate){
 
     private var savedHashMap: Map<String, String>? = null
-    private var savedId: String =  UUID.randomUUID().toString()
+    private var savedId: String =  UUID.randomUUID().toString() // 일단 데이터베이스가 없어서, 임의로 하나의 난수값을 id라고 셋해놓았습니다.
     private var savedTimestamp: Long? = null
 
     fun generateBase64Image(keys: List<String>): String {
@@ -87,7 +87,7 @@ class E2EKeyboardService (private val restTemplate:RestTemplate){
         //println(hashMap)
         savedHashMap = hashMap.mapKeys { it.key.toString() }
 
-        savedTimestamp = System.currentTimeMillis()
+        savedTimestamp = System.currentTimeMillis() //현재시간을 기준으로 검증
 
         //println(savedHashMap)
 
@@ -102,7 +102,7 @@ class E2EKeyboardService (private val restTemplate:RestTemplate){
         return E2EKeyboardResponse(
             keyList = keyList,
             base64Image = base64Image,
-            id = savedId
+            id = savedId // 유저 검증을 위해서 함께 반환
         )
     }
 
