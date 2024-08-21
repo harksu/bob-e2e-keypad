@@ -1,15 +1,14 @@
 package bob.simple.spring.service
 
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.*
 
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
 
-import bob.simple.spring.dto.E2EKeyboardMessageResponse
 import bob.simple.spring.dto.E2EKeyboardResponse
-import java.security.MessageDigest
+import bob.simple.spring.dto.AuthRequestDto
 import kotlin.random.Random
+import kotlin.collections.mapOf
 
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
@@ -17,47 +16,15 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 import java.util.Base64
 import org.springframework.core.io.ClassPathResource
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.ResponseEntity
 
 @Service
-class E2EKeyboardService {
+class E2EKeyboardService (private val restTemplate:RestTemplate){
 
-    fun getMessage(): E2EKeyboardMessageResponse {
-        val imageDirectoryPath = Paths.get("src/main/resources/static")
-
-        // 디렉토리 내 모든 파일 경로를 읽고 PNG 파일만 필터링
-        val imagePaths = Files.walk(imageDirectoryPath)
-            .filter { Files.isRegularFile(it) && it.toString().endsWith(".png") }
-            .toList()
-
-        // 해시 테이블 초기화
-        val hashTable = HashMap<Int, String>()
-
-        for (i in 0..9) {
-            val imageBytes = Files.readAllBytes(imagePaths[i])
-            val imageBase64 = Base64.getEncoder().encodeToString(imageBytes)
-
-            // 숫자를 문자열로 변환
-            val inputString = i.toString()
-            // 문자열을 바이트 배열로 변환
-            val bytes = inputString.toByteArray()
-            // SHA-256 인스턴스를 가져옴
-            val md = MessageDigest.getInstance("SHA-256")
-            // 바이트 배열의 해시 값을 계산
-            val digest = md.digest(bytes)
-            val returnValue = digest.joinToString("") { "%02x".format(it) }
-            println("$i + $imageBase64")
-            hashTable[i] = returnValue
-        }
-
-        // 이미지를 Base64로 인코딩 했으나, 해시 테이블은 인덱스와 매칭되어야 함
-
-        return E2EKeyboardMessageResponse(
-            message = "this is test-template for e2e keypad",
-            author = "harksulim",
-            images = "should refactor",
-            hashValue = hashTable
-        )
-    }
+    private var savedHashMap: Map<String, String>? = null
 
     fun generateBase64Image(keys: List<String>): String {
         return try {
@@ -108,15 +75,17 @@ class E2EKeyboardService {
         list.add("EMPTY")
 
         val shuffledList = list.shuffled(Random(System.currentTimeMillis()))
-        println(shuffledList)
+      //  println(shuffledList)
 
         val base64Image = generateBase64Image(shuffledList)
 
-        println(base64Image)
+        //println(base64Image)
         for (i in 0..9) {
             hashMap[i] = UUID.randomUUID().toString()
         }
-        println(hashMap)
+        //println(hashMap)
+        savedHashMap = hashMap.mapKeys { it.key.toString() }
+        //println(savedHashMap)
 
         val keyList = mutableListOf<String?>()
         for (i in 0..11) {
@@ -124,11 +93,50 @@ class E2EKeyboardService {
             else keyList.add(hashMap[shuffledList[i].toInt()])
         }
 
-        println(keyList)
+   //    println(keyList)
 
         return E2EKeyboardResponse(
             keyList = keyList,
             base64Image = base64Image
         )
+    }
+
+    fun getUserKeypadInput(encryptedUserInput:String){
+        //여기서 이제 엔드포인트한테 요청을 보내야됨
+
+        val url = "http://146.56.119.112:8081/auth"
+
+        val keyHashMap = savedHashMap ?: throw IllegalStateException("HashMap not found")
+        //println(keyHashMap)
+
+
+        val requestPayload = mapOf(
+            "userInput" to encryptedUserInput,
+            "keyHashMap" to keyHashMap,
+            "keyLength" to keyHashMap.values.first().length
+        )
+
+        println(requestPayload)
+        val headers = HttpHeaders()
+        headers.set("Content-Type", "application/json")
+
+       val request = HttpEntity(requestPayload,headers)
+
+        try {
+            val response: ResponseEntity<String> = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                request,
+                String::class.java
+            )
+          //  println("Response from server: ${response}")
+            println("Response Body: ${response.body}")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("Exception occurred: ${e.message}")
+
+
+        }
+
     }
 }
